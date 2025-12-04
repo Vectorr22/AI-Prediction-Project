@@ -9,12 +9,13 @@ from elevenlabs.client import ElevenLabs
 from elevenlabs import VoiceSettings
 import os
 from dotenv import load_dotenv
+import random
 
 load_dotenv()
 
 
-#ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
-ELEVENLABS_API_KEY = "fake api"
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+#ELEVENLABS_API_KEY = "fake api"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 # Validar que las keys existen
@@ -30,110 +31,112 @@ if not ELEVENLABS_API_KEY or not GEMINI_API_KEY:
     st.stop()
 
 
-# Configurar Gemini
+# Configurar clientes
 client_gemini = genai.Client(api_key=GEMINI_API_KEY)
+client_eleven = ElevenLabs(api_key=ELEVENLABS_API_KEY)
 
-@st.cache_data(show_spinner=False, ttl=3600)
-def generar_prediccion_ia(carta_pasado, carta_presente, carta_futuro):
-    """
-    Genera una predicción divertida usando el NUEVO SDK de Google
-    """
-    logger.info(f"🤖 Generando predicción con IA para: {carta_pasado}, {carta_presente}, {carta_futuro}")
-    
-    prompt = f"""
-    Eres un oráculo místico mexicano que lee la lotería. Te han mostrado 3 cartas:
-    - Pasado: {carta_pasado}
-    - Presente: {carta_presente}
-    - Futuro: {carta_futuro}
-    
-    Genera UNA predicción divertida, mística y dramática en español mexicano.
-    
-    FORMATO REQUERIDO:
-    En tu pasado, [frase sobre {carta_pasado}]
-    Actualmente, [frase sobre {carta_presente}]
-    Pero ten cuidado, tu futuro indica que [frase sobre {carta_futuro}]
-    
-    REGLAS: Máximo 50 palabras. Tono divertido y mexicano ("órale", "aguas").
-    """
-    
-    try:
-        # --- SINTAXIS NUEVA ---
-        response = client_gemini.models.generate_content(
-            model='gemini-2.5-flash', 
-            contents=prompt,
-            config={
-                'temperature': 0.9,
-            }
-        )
-        
-        prediccion = response.text.strip()
-        
-        # Limpieza básica
-        prediccion = prediccion.replace("*", "").replace("\n", " ").strip()
-        
-        logger.info(f"✅ Predicción generada: {prediccion[:50]}...")
-        return prediccion
-
-    except Exception as e:
-        logger.error(f"❌ Error generando predicción con IA (Nuevo SDK): {e}")
-        # Fallback manual
-        return f"En tu pasado, {SIGNIFICADOS[carta_pasado]}. Actualmente, {SIGNIFICADOS[carta_presente]}. Pero ten cuidado, tu futuro indica que {SIGNIFICADOS[carta_futuro]}."
-
-# Inicializar cliente
-client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
-
-@st.cache_data(show_spinner=False)
-def texto_a_audio_elevenlabs(texto):
-    """Genera audio ULTRA DRAMÁTICO con ElevenLabs"""
-    logger.info(f"🎤 Generando audio épico: '{texto[:30]}...'")
-    try:
-        # Reescribir el texto para ser más teatral
-        partes = texto.split('.')
-        texto_dramatico = f"""
-        ¡Escucha bien, mortal! 
-        El oráculo místico ha descifrado tu destino.
-        En las sombras de tu pasado {partes[1].strip() if len(partes) > 1 else ''}
-        Y ahora, en este instante {partes[2].strip() if len(partes) > 2 else ''}
-        Pero presta atención porque lo que viene 
-        {partes[3].strip() if len(partes) > 3 else ''}
-        Las cartas han hablado.
-        """
-        
-        response = client.text_to_speech.convert(
-            voice_id="VR6AewLTigWG4xSOukaG",  # Arnold (más místico que Daniel)
-            optimize_streaming_latency="0",
-            output_format="mp3_22050_32",
-            text=texto_dramatico,
-            model_id="eleven_multilingual_v2",
-            voice_settings=VoiceSettings(
-                stability=0.3,  # ← Máxima expresividad
-                similarity_boost=0.7,
-                style=0.85,  # ← Súper dramático
-                use_speaker_boost=True,
-            )
-        )
-        
-        audio_bytes = b"".join(response)
-        logger.info("✅ Audio épico generado")
-        return audio_bytes
-    except Exception as e:
-        logger.error(f"❌ Error: {e}")
-        return None
-# ==========================================
-# 0. CONFIGURACIÓN DE LOGS
-# ==========================================
 logging.basicConfig(
     level=logging.INFO, 
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
+@st.cache_data(show_spinner=False, ttl=3600)
+def generar_prediccion_ia(c1, c2, c3):
+    """
+    Genera una historia coherente y fluida conectando las 3 cartas.
+    """
+    logger.info(f"🤖 Generando narrativa para: {c1} -> {c2} -> {c3}")
+    
+    # PROMPT DE INGENIERÍA NARRATIVA
+    # El truco aquí es pedirle que actúe como un personaje y prohibirle estructuras rígidas.
+    prompt = f"""
+    Actúa como un brujo místico de feria mexicana, sabio pero con jerga de barrio.
+    
+    Tienes 3 cartas de la lotería que representan la línea temporal de una persona:
+    1. PASADO (Causa): {c1}
+    2. PRESENTE (Situación actual): {c2}
+    3. FUTURO (Consecuencia/Advertencia): {c3}
+    
+    TU TAREA:
+    Escribe UNA SOLA predicción de máximo 50 palabras que conecte estas tres cartas en una historia fluida.
+    
+    REGLAS DE ORO:
+    - NO empieces las oraciones con "Tu pasado fué", "Tu presente es" o "Tu futuro será". Usa conectores como "antes", "ahorita", "por eso", "así que aguas".
+    - NO hagas listas. Debe ser un párrafo corrido.
+    - Menciona las cartas por su nombre.
+    - Tono: Divertido, místico, mexicano ("órale", "no manches", "ponte trucha").
+    - Termina con una advertencia o consejo contundente basado en la tercera carta.
+    - Aunque puedes usar modismos mexicanos, no caigas mucho en ellos, no es una exageración de mexicano
+    Ejemplo de estilo deseado:
+    "Uy amigo, se ve que el Apache te trajo problemas de a gratis, y aunque ahorita el Gallo te tiene muy despierto y movido, bájale dos rayitas porque la Sirena te quiere endulzar el oído con mentiras."
+    """
+    
+    try:
+        response = client_gemini.models.generate_content(
+            model='gemini-2.5-flash', 
+            contents=prompt,
+            config={'temperature': 1.0} # Alta temperatura para más creatividad
+        )
+        
+        texto = response.text.strip()
+        # Limpieza extra
+        texto = texto.replace('"', '').replace('*', '')
+        return texto
 
+    except Exception as e:
+        logger.error(f"❌ Error Gemini: {e}")
+        # Fallback genérico pero fluido
+        return f"Vaya combinación. El {c1} dejó huella, ahora el {c2} marca tu paso, ¡pero cuidado con el {c3} que viene fuerte!"
+
+@st.cache_data(show_spinner=False)
+def texto_a_audio_elevenlabs(texto_prediccion):
+    """
+    Genera audio natural uniendo una intro aleatoria + la predicción fluida.
+    """
+    # 1. Seleccionamos una intro al azar para variedad
+    intro = random.choice(INTROS_DRAMATICAS)
+    
+    # 2. Unimos el texto completo
+    texto_final = f"{intro} ... {texto_prediccion}"
+    
+    logger.info(f"🎤 Generando voz para: '{texto_final[:40]}...'")
+    
+    try:
+        # Usamos settings probados para que suene expresivo pero estable
+        response = client_eleven.text_to_speech.convert(
+            voice_id="VR6AewLTigWG4xSOukaG", # Arnold (Voz profunda/mística)
+            optimize_streaming_latency="0",
+            output_format="mp3_44100_128",
+            text=texto_final,
+            model_id="eleven_multilingual_v2",
+            voice_settings=VoiceSettings(
+                stability=0.4,       # Un poco más bajo = más emoción/variación
+                similarity_boost=0.8, # Mantiene la identidad de la voz
+                style=0.6,           # Estilo dramático moderado
+                use_speaker_boost=True
+            )
+        )
+        audio_bytes = b"".join(response)
+        return audio_bytes, texto_final # Devolvemos también el texto para mostrarlo si quieres
+    except Exception as e:
+        logger.error(f"❌ Error ElevenLabs: {e}")
+        return None, None
+
+
+# Intros aleatorias para que no suene repetitivo
+INTROS_DRAMATICAS = [
+    "¡Pongan mucha atención!",
+    "¡Híjole! Las cartas están calientes.",
+    "¡Escucha bien lo que dice el destino!",
+    "¡Ay nanita! Mira nomás lo que salió.",
+    "¡Órale! El oráculo ha hablado.",
+    "Silencio todos, que las cartas revelan la verdad."
+]
 
 # ==========================================
 # 1. CONFIGURACIÓN Y "CEREBRO MÍSTICO"
 # ==========================================
-
 st.set_page_config(
     page_title="El Oráculo de la Lotería", 
     page_icon="🔮", 
@@ -473,11 +476,12 @@ def mostrar_revelacion(c1, c2, c3):
     texto_para_leer = f"Atención. El oráculo ha hablado. {prediccion_ia}"
     
     with st.spinner("🎙️ El oráculo prepara su voz..."):
-        audio_bytes = texto_a_audio_elevenlabs(texto_para_leer)
-    
-    if audio_bytes:
+        resultado_audio = texto_a_audio_elevenlabs(texto_para_leer)
+
+    if resultado_audio and resultado_audio[0]:  # resultado_audio es (audio_bytes, texto_final)
+        audio_bytes, texto_completo = resultado_audio
         st.audio(audio_bytes, format='audio/mp3', autoplay=True)
-        logger.info("✅ Audio reproducido")
+        logger.info(f"✅ Audio reproducido: '{texto_completo[:50]}...'")
     else:
         st.warning("🔇 El oráculo está afónico, pero tu destino está escrito arriba.")
         logger.warning("Fallo en audio")
