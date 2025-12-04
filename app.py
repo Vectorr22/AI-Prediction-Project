@@ -134,6 +134,14 @@ INTROS_DRAMATICAS = [
     "Silencio todos, que las cartas revelan la verdad."
 ]
 
+# Inicializar memoria de cartas encontradas
+if 'cartas_vistas' not in st.session_state:
+    st.session_state['cartas_vistas'] = []
+if 'show_modal' not in st.session_state:
+    st.session_state['show_modal'] = False
+if 'camera_reset_counter' not in st.session_state:
+    st.session_state['camera_reset_counter'] = 0
+
 # ==========================================
 # 1. CONFIGURACIÓN Y "CEREBRO MÍSTICO"
 # ==========================================
@@ -344,8 +352,9 @@ if 'show_modal' not in st.session_state:
 col_left, col_right = st.columns([1, 1], gap="medium")
 
 with col_left:
-    # Input de cámara
-    img_file_buffer = st.camera_input("📸 El Ojo que Todo lo Ve")
+    # Input de cámara con key dinámica para forzar reset
+    camera_key = f"camera_{st.session_state.get('camera_reset_counter', 0)}"
+    img_file_buffer = st.camera_input("📸 El Ojo que Todo lo Ve", key=camera_key)
     
     # Área de información debajo de la cámara
     info_placeholder = st.empty()
@@ -441,8 +450,11 @@ with col_right:
     if total > 0:
         st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
         if st.button("🔄 Reiniciar Lectura", use_container_width=True):
+            # Limpiar cartas
             st.session_state['cartas_vistas'] = []
             st.session_state['show_modal'] = False
+            # Incrementar contador para resetear la cámara
+            st.session_state['camera_reset_counter'] = st.session_state.get('camera_reset_counter', 0) + 1
             st.rerun()
     
     # Progreso
@@ -473,10 +485,8 @@ def mostrar_revelacion(c1, c2, c3):
     st.markdown(f"<div class='final-destiny'>¡Las cartas {c1}, {c2} y {c3} han hablado!</div>", unsafe_allow_html=True)
 
     # 3. GENERAR AUDIO
-    texto_para_leer = f"Atención. El oráculo ha hablado. {prediccion_ia}"
-    
     with st.spinner("🎙️ El oráculo prepara su voz..."):
-        resultado_audio = texto_a_audio_elevenlabs(texto_para_leer)
+        resultado_audio = texto_a_audio_elevenlabs(prediccion_ia)
 
     if resultado_audio and resultado_audio[0]:  # resultado_audio es (audio_bytes, texto_final)
         audio_bytes, texto_completo = resultado_audio
@@ -489,8 +499,11 @@ def mostrar_revelacion(c1, c2, c3):
     # 4. BOTÓN REINICIO
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("✨ Leer otra fortuna ✨", type="primary", use_container_width=True):
+        # Limpiar cartas
         st.session_state['cartas_vistas'] = [] 
-        st.session_state['show_modal'] = False 
+        st.session_state['show_modal'] = False
+        # Incrementar contador para resetear la cámara
+        st.session_state['camera_reset_counter'] = st.session_state.get('camera_reset_counter', 0) + 1
         st.rerun()
 
 # Lógica de disparo del modal
