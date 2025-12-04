@@ -4,6 +4,61 @@ import numpy as np
 from ultralytics import YOLO
 import time
 from textwrap import dedent
+from gtts import gTTS
+from io import BytesIO
+import logging
+
+# ==========================================
+# ELEVENLABS ACTUALIZADO (Nueva API v1.x)
+# ==========================================
+from elevenlabs.client import ElevenLabs
+from elevenlabs import VoiceSettings
+
+# Tu API Key
+ELEVENLABS_API_KEY = "sk_8f8c22bf51888b3cd4c076795c2b9206a495c958abeb3346"
+
+# Inicializar cliente
+client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
+
+@st.cache_data(show_spinner=False)
+def texto_a_audio_elevenlabs(texto):
+    """Genera audio ultra realista con ElevenLabs (API nueva)"""
+    logger.info(f"🎤 Generando audio con ElevenLabs: '{texto[:30]}...'")
+    try:
+        # Generar audio con la nueva API
+        response = client.text_to_speech.convert(
+            voice_id="onwK4e9ZLuTAKqWW03F9",  
+            optimize_streaming_latency="0",
+            output_format="mp3_22050_32",
+            text=texto,
+            model_id="eleven_multilingual_v2",
+            voice_settings=VoiceSettings(
+                stability=0.5,
+                similarity_boost=0.8,
+                style=0.0,
+                use_speaker_boost=True,
+            )
+        )
+        
+        # Convertir generador a bytes
+        audio_bytes = b"".join(response)
+        
+        logger.info("✅ Audio generado con ElevenLabs")
+        return audio_bytes
+    except Exception as e:
+        logger.error(f"❌ Error con ElevenLabs: {e}")
+        return None
+
+# ==========================================
+# 0. CONFIGURACIÓN DE LOGS
+# ==========================================
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# ...existing code...
 
 # ==========================================
 # 1. CONFIGURACIÓN Y "CEREBRO MÍSTICO"
@@ -16,15 +71,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Permitir cerrar el modal recargando la página con un query param
-params = st.query_params
-if params.get("close_modal") == "true":
-    st.session_state['cartas_vistas'] = []
-    st.session_state['show_modal'] = False
-    st.query_params.clear()
-
 # Diccionario con significados divertidos/místicos para cada carta
-
 SIGNIFICADOS = {
     "Apache": "enfrentarás un conflicto ajeno",
     "Arana": "tejerás una red de mentiras (o de éxito)",
@@ -108,26 +155,41 @@ DESCRIPCIONES = {
     "Violencello": "¡Armonía! El Violoncello trae paz al hogar. La música y la tranquilidad regresan a tu vida."
 }
 
+# --- FUNCIÓN DE AUDIO BLINDADA (RETORNA BYTES CRUDOS) ---
+@st.cache_data(show_spinner=False)
+def texto_a_audio(texto):
+    """Genera audio con acento mexicano usando gTTS"""
+    logger.info(f"🎤 Iniciando generación de audio para: '{texto[:30]}...'")
+    try:
+        tts = gTTS(text=texto, lang='es', tld='com.mx', slow=False)
+        fp = BytesIO()
+        tts.write_to_fp(fp)
+        
+        # Obtenemos los bytes puros (esto soluciona el problema del puntero/cache)
+        audio_bytes = fp.getvalue()
+        
+        logger.info("✅ Audio generado correctamente (bytes).")
+        return audio_bytes
+    except Exception as e:
+        logger.error(f"❌ ERROR generando audio: {e}")
+        return None
 
-
-
-
-
-# Cargar Modelo (con caché para que no recargue lento)
+# Cargar Modelo
 @st.cache_resource
 def load_model():
+    logger.info("Cargando modelo YOLO...")
     return YOLO("best.pt")
 
 try:
     model = load_model()
-except:
+    logger.info("✅ Modelo cargado exitosamente.")
+except Exception as e:
+    logger.critical(f"❌ Error fatal cargando el modelo: {e}")
     st.error("⚠️ Error: No encuentro el archivo 'best.pt'. Ponlo en la misma carpeta.")
     st.stop()
 
-
-
 # ==========================================
-# 2. INTERFAZ GRÁFICA (CSS Y ESTILO MEJORADO)
+# 2. INTERFAZ GRÁFICA (CSS Y ESTILO)
 # ==========================================
 
 st.markdown("""
@@ -178,108 +240,6 @@ st.markdown("""
         box-shadow: 0 12px 24px rgba(255, 215, 0, 0.4);
     }
     
-    /* DIÁLOGO MODAL GRANDE CON ANIMACIÓN */
-    .modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: rgba(0, 0, 0, 0.85);
-        z-index: 9999;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        animation: fadeIn 0.5s ease-out;
-    }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
-    
-    .modal-dialog {
-        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-        padding: 35px 40px;
-        border-radius: 25px;
-        border: 5px solid #FF69B4;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-        max-width: 700px;
-        width: 85%;
-        max-height: 85vh;
-        overflow-y: auto;
-        animation: scaleIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        position: relative;
-    }
-    
-    @keyframes scaleIn {
-        from { 
-            opacity: 0; 
-            transform: scale(0.3) rotate(-10deg);
-        }
-        to { 
-            opacity: 1; 
-            transform: scale(1) rotate(0deg);
-        }
-    }
-    
-    .modal-close-x {
-        position: absolute;
-        top: 15px;
-        right: 20px;
-        font-size: 32px;
-        font-weight: bold;
-        color: #4B0082;
-        cursor: pointer;
-        background: white;
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        transition: all 0.3s;
-        line-height: 1;
-        z-index: 10;
-        border: none;
-    }
-    
-    .modal-close-x:hover {
-        transform: rotate(90deg) scale(1.1);
-        background: #FFD700;
-        color: white;
-    }
-    
-    .modal-title {
-        font-size: 38px !important;
-        font-weight: bold;
-        color: #4B0082 !important;
-        text-align: center;
-        margin-bottom: 25px;
-        margin-top: 10px;
-        text-shadow: 2px 2px 4px rgba(255,255,255,0.5);
-        animation: pulse 2s ease-in-out infinite;
-    }
-    
-    @keyframes pulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-    }
-    
-    .modal-text {
-        font-size: 20px !important;
-        color: #1a1a1a !important;
-        line-height: 1.7;
-        font-weight: 600;
-        text-align: center;
-    }
-    
-    .modal-close-btn {
-        margin-top: 20px;
-        text-align: center;
-    }
-    
     /* Botones personalizados */
     .stButton>button {
         background: linear-gradient(45deg, #FF69B4, #FFD700);
@@ -296,37 +256,6 @@ st.markdown("""
     .stButton>button:hover {
         transform: scale(1.1);
         box-shadow: 0 8px 25px rgba(255, 105, 180, 0.5);
-    }
-    
-    /* Emojis animados */
-    .emoji-float {
-        animation: float 3s ease-in-out infinite;
-        display: inline-block;
-    }
-    
-    @keyframes float {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-20px); }
-    }
-    
-    /* Overlay de imagen sobre la cámara */
-    [data-testid="stCameraInput"] {
-        position: relative;
-    }
-    
-    [data-testid="stCameraInput"]::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-image: url('oracle_overlay.png');
-        background-size: cover;
-        background-position: center;
-        pointer-events: none;
-        z-index: 10;
-        opacity: 0.8;
     }
     
     /* Compactar espaciado */
@@ -396,6 +325,7 @@ with col_left:
                     st.toast(f"🎉 ¡Carta capturada: {detectado_ahora}!", icon="🃏")
                     # Mostrar descripción de la carta detectada
                     info_placeholder.success(f"**✨ {detectado_ahora} detectado!**\n\n{DESCRIPCIONES.get(detectado_ahora, 'Una carta misteriosa...')}", icon="🎴")
+                    logger.info(f"Carta detectada: {detectado_ahora}")
                 else:
                     st.warning(f"🤔 Veo un {detectado_ahora}, pero no sé qué significa.")
             else:
@@ -464,76 +394,57 @@ with col_right:
         st.markdown(f"<p style='text-align:center; font-size:16px; color:white; margin-top:15px;'>⏳ Faltan <b>{3-total}</b> carta(s)</p>", unsafe_allow_html=True)
 
 # ==========================================
-# MODAL DE REVELACIÓN FINAL
+# 4. MODAL DE REVELACIÓN FINAL (CON VOZ Y LOGS 🎙️)
 # ==========================================
 
-if total >= 3 and not st.session_state['show_modal']:
-    st.session_state['show_modal'] = True
-    st.balloons()
+@st.dialog("🔮 Tu Destino Revelado 🔮")
+def mostrar_revelacion(c1, c2, c3):
+    # CSS interno corregido
+    st.markdown("""
+    <style>
+    .pred-title { font-size: 20px; font-weight: bold; color: #FFD700; margin-top: 10px; margin-bottom: 5px; text-shadow: 0px 0px 5px rgba(255, 215, 0, 0.3); }
+    .pred-text { font-size: 18px; color: #f0f0f0; margin-bottom: 15px; line-height: 1.4; font-weight: 400; }
+    .pred-sub { font-size: 14px; color: #a0a0a0; font-style: italic; }
+    .final-destiny { font-size: 24px; font-weight: bold; color: #C71585; text-align: center; margin-top: 25px; margin-bottom: 35px; padding: 20px; background-color: #FFF0F5; border-radius: 12px; border: 2px dashed #C71585; box-shadow: 0 0 15px rgba(199, 21, 133, 0.4); }
+    </style>
+    """, unsafe_allow_html=True)
 
-if st.session_state['show_modal'] and total >= 3:
-    c1 = cartas[0]
-    c2 = cartas[1]
-    c3 = cartas[2]
+    # Mostrar textos
+    st.markdown(f"<div class='pred-title'>🌅 En tu Pasado...</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='pred-text'>{SIGNIFICADOS[c1]} <br><span class='pred-sub'>(revelado por: {c1})</span></div>", unsafe_allow_html=True)
+    st.divider()
+    st.markdown(f"<div class='pred-title'>⚡ En tu Presente...</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='pred-text'>{SIGNIFICADOS[c2]} <br><span class='pred-sub'>(revelado por: {c2})</span></div>", unsafe_allow_html=True)
+    st.divider()
+    st.markdown(f"<div class='pred-title'>🌙 En tu Futuro...</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='pred-text'>{SIGNIFICADOS[c3]}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='final-destiny'>¡{c3} ha hablado!</div>", unsafe_allow_html=True)
+
+    # 2. INTENTAR REPRODUCIR AUDIO
+    texto_para_leer = f"Atención. El oráculo ha hablado. En tu pasado, {SIGNIFICADOS[c1]}. Actualmente, {SIGNIFICADOS[c2]}. Pero ten cuidado, tu futuro indica que {SIGNIFICADOS[c3]}."
     
-    # Crear un contenedor para el modal con JavaScript para cerrar
-    modal_container = st.empty()
+    with st.spinner("Conectando con el oráculo de voz..."):
+        # audio_bytes = texto_a_audio(texto_para_leer)
+        audio_bytes = texto_a_audio_elevenlabs(texto_para_leer)
     
-    with modal_container.container():
-        st.markdown(f"""
-        <div class='modal-overlay' id='predictionModal'>
-            <div class='modal-dialog'>
-                <div class='modal-close-x' id='closeModal'>&times;</div>
-                <p class='modal-title'>
-                    <span class='emoji-float'>🔮</span> Tu Destino Revelado <span class='emoji-float'>🔮</span>
-                </p>
-                <div class='modal-text'>
-                    <p style='margin:15px 0;'>✨ En tu <b>pasado</b>, {SIGNIFICADOS[c1]}</p>
-                    <p style='font-size:18px; color:#4B0082; margin:8px 0;'>(la carta <i>{c1}</i> lo revela)</p>
-                    
-                    <p style='margin:20px 0 15px 0;'>🌟 En tu <b>presente</b>, {SIGNIFICADOS[c2]}</p>
-                    <p style='font-size:18px; color:#4B0082; margin:8px 0;'>(así dicta <i>{c2}</i>)</p>
-                    
-                    <p style='margin:20px 0 15px 0;'>⚠️ Y en tu <b>futuro</b>, {SIGNIFICADOS[c3]}</p>
-                    
-                    <p style='font-size:24px; margin-top:25px; font-weight:bold; color:#8B008B;'>¡El <i>{c3}</i> ha hablado!</p>
-                </div>
-            </div>
-        </div>
-        
-        <script>
-        // JavaScript para cerrar el modal
-        const closeBtn = document.getElementById('closeModal');
-        const modal = document.getElementById('predictionModal');
-        
-        if (closeBtn) {{
-            closeBtn.onclick = function() {{
-                window.parent.postMessage({{
-                    type: 'streamlit:setComponentValue',
-                    key: 'close_modal',
-                    value: true
-                }}, '*');
-            }}
-        }}
-        
-        if (modal) {{
-            modal.onclick = function(event) {{
-                if (event.target === modal) {{
-                    window.parent.postMessage({{
-                        type: 'streamlit:setComponentValue',
-                        key: 'close_modal',
-                        value: true
-                    }}, '*');
-                }}
-            }}
-        }}
-        </script>
-        """, unsafe_allow_html=True)
-        
-        # Botón para cerrar el modal
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            if st.button("✨ Leer otra fortuna ✨", key="close_modal_btn", use_container_width=True):
-                st.session_state['cartas_vistas'] = []
-                st.session_state['show_modal'] = False
-                st.rerun()
+    if audio_bytes:
+        st.audio(audio_bytes, format='audio/mp3', start_time=0, autoplay=True)
+    else:
+        st.warning("🔇 El oráculo está afónico (Error de conexión con gTTS), pero tu destino sigue escrito arriba.")
+        logger.warning("Fallo en la generación de audio, mostrando solo texto.")
+
+    # 3. BOTÓN DE REINICIO
+    if st.button("✨ Leer otra fortuna (Reiniciar) ✨", type="primary", use_container_width=True):
+        st.session_state['cartas_vistas'] = [] 
+        st.session_state['show_modal'] = False 
+        st.rerun() 
+
+# Lógica de disparo del modal
+if total >= 3:
+    if not st.session_state['show_modal']:
+        st.session_state['show_modal'] = True
+        st.balloons()
+        st.rerun()
+    
+    if st.session_state['show_modal']:
+        mostrar_revelacion(cartas[0], cartas[1], cartas[2])
