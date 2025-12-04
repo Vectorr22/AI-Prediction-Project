@@ -22,33 +22,41 @@ client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
 
 @st.cache_data(show_spinner=False)
 def texto_a_audio_elevenlabs(texto):
-    """Genera audio ultra realista con ElevenLabs (API nueva)"""
-    logger.info(f"🎤 Generando audio con ElevenLabs: '{texto[:30]}...'")
+    """Genera audio ULTRA DRAMÁTICO con ElevenLabs"""
+    logger.info(f"🎤 Generando audio épico: '{texto[:30]}...'")
     try:
-        # Generar audio con la nueva API
+        # Reescribir el texto para ser más teatral
+        partes = texto.split('.')
+        texto_dramatico = f"""
+        ¡Escucha bien, mortal! 
+        El oráculo místico ha descifrado tu destino.
+        En las sombras de tu pasado {partes[1].strip() if len(partes) > 1 else ''}
+        Y ahora, en este instante {partes[2].strip() if len(partes) > 2 else ''}
+        Pero presta atención porque lo que viene 
+        {partes[3].strip() if len(partes) > 3 else ''}
+        Las cartas han hablado.
+        """
+        
         response = client.text_to_speech.convert(
-            voice_id="onwK4e9ZLuTAKqWW03F9",  
+            voice_id="VR6AewLTigWG4xSOukaG",  # Arnold (más místico que Daniel)
             optimize_streaming_latency="0",
             output_format="mp3_22050_32",
-            text=texto,
+            text=texto_dramatico,
             model_id="eleven_multilingual_v2",
             voice_settings=VoiceSettings(
-                stability=0.5,
-                similarity_boost=0.8,
-                style=0.0,
+                stability=0.3,  # ← Máxima expresividad
+                similarity_boost=0.7,
+                style=0.85,  # ← Súper dramático
                 use_speaker_boost=True,
             )
         )
         
-        # Convertir generador a bytes
         audio_bytes = b"".join(response)
-        
-        logger.info("✅ Audio generado con ElevenLabs")
+        logger.info("✅ Audio épico generado")
         return audio_bytes
     except Exception as e:
-        logger.error(f"❌ Error con ElevenLabs: {e}")
+        logger.error(f"❌ Error: {e}")
         return None
-
 # ==========================================
 # 0. CONFIGURACIÓN DE LOGS
 # ==========================================
