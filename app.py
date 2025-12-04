@@ -13,10 +13,16 @@ import random
 
 load_dotenv()
 
+def get_secret(key_name):
+    """Busca la clave primero en Streamlit Cloud Secrets, luego en variables de entorno"""
+    if key_name in st.secrets:
+        return st.secrets[key_name]
+    return os.getenv(key_name)
 
-ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+
+ELEVENLABS_API_KEY = get_secret("ELEVENLABS_API_KEY")
 #ELEVENLABS_API_KEY = "fake api"
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = get_secret("GEMINI_API_KEY")
 
 # Validar que las keys existen
 if not ELEVENLABS_API_KEY or not GEMINI_API_KEY:
