@@ -2,20 +2,82 @@ import streamlit as st
 import cv2
 import numpy as np
 from ultralytics import YOLO
-import time
 from textwrap import dedent
-from gtts import gTTS
-from io import BytesIO
 import logging
-
-# ==========================================
-# ELEVENLABS ACTUALIZADO (Nueva API v1.x)
-# ==========================================
+from google import genai
 from elevenlabs.client import ElevenLabs
 from elevenlabs import VoiceSettings
+import os
+from dotenv import load_dotenv
 
-# Tu API Key
-ELEVENLABS_API_KEY = "sk_8f8c22bf51888b3cd4c076795c2b9206a495c958abeb3346"
+load_dotenv()
+
+
+#ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+ELEVENLABS_API_KEY = "fake api"
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+# Validar que las keys existen
+if not ELEVENLABS_API_KEY or not GEMINI_API_KEY:
+    st.error("❌ Error: No se encontraron las API keys. Crea un archivo .env con tus credenciales.")
+    st.info("""
+    Crea un archivo `.env` en la carpeta del proyecto con este contenido:
+    ```
+    ELEVENLABS_API_KEY=tu_key_aqui
+    GEMINI_API_KEY=tu_key_aqui
+    ```
+    """)
+    st.stop()
+
+
+# Configurar Gemini
+client_gemini = genai.Client(api_key=GEMINI_API_KEY)
+
+@st.cache_data(show_spinner=False, ttl=3600)
+def generar_prediccion_ia(carta_pasado, carta_presente, carta_futuro):
+    """
+    Genera una predicción divertida usando el NUEVO SDK de Google
+    """
+    logger.info(f"🤖 Generando predicción con IA para: {carta_pasado}, {carta_presente}, {carta_futuro}")
+    
+    prompt = f"""
+    Eres un oráculo místico mexicano que lee la lotería. Te han mostrado 3 cartas:
+    - Pasado: {carta_pasado}
+    - Presente: {carta_presente}
+    - Futuro: {carta_futuro}
+    
+    Genera UNA predicción divertida, mística y dramática en español mexicano.
+    
+    FORMATO REQUERIDO:
+    En tu pasado, [frase sobre {carta_pasado}]
+    Actualmente, [frase sobre {carta_presente}]
+    Pero ten cuidado, tu futuro indica que [frase sobre {carta_futuro}]
+    
+    REGLAS: Máximo 50 palabras. Tono divertido y mexicano ("órale", "aguas").
+    """
+    
+    try:
+        # --- SINTAXIS NUEVA ---
+        response = client_gemini.models.generate_content(
+            model='gemini-2.5-flash', 
+            contents=prompt,
+            config={
+                'temperature': 0.9,
+            }
+        )
+        
+        prediccion = response.text.strip()
+        
+        # Limpieza básica
+        prediccion = prediccion.replace("*", "").replace("\n", " ").strip()
+        
+        logger.info(f"✅ Predicción generada: {prediccion[:50]}...")
+        return prediccion
+
+    except Exception as e:
+        logger.error(f"❌ Error generando predicción con IA (Nuevo SDK): {e}")
+        # Fallback manual
+        return f"En tu pasado, {SIGNIFICADOS[carta_pasado]}. Actualmente, {SIGNIFICADOS[carta_presente]}. Pero ten cuidado, tu futuro indica que {SIGNIFICADOS[carta_futuro]}."
 
 # Inicializar cliente
 client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
@@ -66,7 +128,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ...existing code...
+
 
 # ==========================================
 # 1. CONFIGURACIÓN Y "CEREBRO MÍSTICO"
@@ -163,24 +225,7 @@ DESCRIPCIONES = {
     "Violencello": "¡Armonía! El Violoncello trae paz al hogar. La música y la tranquilidad regresan a tu vida."
 }
 
-# --- FUNCIÓN DE AUDIO BLINDADA (RETORNA BYTES CRUDOS) ---
-@st.cache_data(show_spinner=False)
-def texto_a_audio(texto):
-    """Genera audio con acento mexicano usando gTTS"""
-    logger.info(f"🎤 Iniciando generación de audio para: '{texto[:30]}...'")
-    try:
-        tts = gTTS(text=texto, lang='es', tld='com.mx', slow=False)
-        fp = BytesIO()
-        tts.write_to_fp(fp)
-        
-        # Obtenemos los bytes puros (esto soluciona el problema del puntero/cache)
-        audio_bytes = fp.getvalue()
-        
-        logger.info("✅ Audio generado correctamente (bytes).")
-        return audio_bytes
-    except Exception as e:
-        logger.error(f"❌ ERROR generando audio: {e}")
-        return None
+
 
 # Cargar Modelo
 @st.cache_resource
@@ -404,48 +449,45 @@ with col_right:
 # ==========================================
 # 4. MODAL DE REVELACIÓN FINAL (CON VOZ Y LOGS 🎙️)
 # ==========================================
-
 @st.dialog("🔮 Tu Destino Revelado 🔮")
 def mostrar_revelacion(c1, c2, c3):
-    # CSS interno corregido
     st.markdown("""
     <style>
-    .pred-title { font-size: 20px; font-weight: bold; color: #FFD700; margin-top: 10px; margin-bottom: 5px; text-shadow: 0px 0px 5px rgba(255, 215, 0, 0.3); }
-    .pred-text { font-size: 18px; color: #f0f0f0; margin-bottom: 15px; line-height: 1.4; font-weight: 400; }
-    .pred-sub { font-size: 14px; color: #a0a0a0; font-style: italic; }
-    .final-destiny { font-size: 24px; font-weight: bold; color: #C71585; text-align: center; margin-top: 25px; margin-bottom: 35px; padding: 20px; background-color: #FFF0F5; border-radius: 12px; border: 2px dashed #C71585; box-shadow: 0 0 15px rgba(199, 21, 133, 0.4); }
+    .pred-title { font-size: 22px; font-weight: bold; color: #FFD700; margin: 20px 0 15px 0; text-align: center; }
+    .pred-text { font-size: 20px; color: #f0f0f0; margin-bottom: 20px; line-height: 1.6; font-weight: 400; text-align: center; }
+    .final-destiny { font-size: 26px; font-weight: bold; color: #C71585; text-align: center; margin-top: 30px; padding: 20px; background-color: #FFF0F5; border-radius: 12px; border: 2px dashed #C71585; box-shadow: 0 0 15px rgba(199, 21, 133, 0.4); }
     </style>
     """, unsafe_allow_html=True)
 
-    # Mostrar textos
-    st.markdown(f"<div class='pred-title'>🌅 En tu Pasado...</div>", unsafe_allow_html=True)
-    st.markdown(f"<div class='pred-text'>{SIGNIFICADOS[c1]} <br><span class='pred-sub'>(revelado por: {c1})</span></div>", unsafe_allow_html=True)
-    st.divider()
-    st.markdown(f"<div class='pred-title'>⚡ En tu Presente...</div>", unsafe_allow_html=True)
-    st.markdown(f"<div class='pred-text'>{SIGNIFICADOS[c2]} <br><span class='pred-sub'>(revelado por: {c2})</span></div>", unsafe_allow_html=True)
-    st.divider()
-    st.markdown(f"<div class='pred-title'>🌙 En tu Futuro...</div>", unsafe_allow_html=True)
-    st.markdown(f"<div class='pred-text'>{SIGNIFICADOS[c3]}</div>", unsafe_allow_html=True)
-    st.markdown(f"<div class='final-destiny'>¡{c3} ha hablado!</div>", unsafe_allow_html=True)
-
-    # 2. INTENTAR REPRODUCIR AUDIO
-    texto_para_leer = f"Atención. El oráculo ha hablado. En tu pasado, {SIGNIFICADOS[c1]}. Actualmente, {SIGNIFICADOS[c2]}. Pero ten cuidado, tu futuro indica que {SIGNIFICADOS[c3]}."
+    # 1. GENERAR PREDICCIÓN CON IA
+    st.markdown("<div class='pred-title'>🔮 El Oráculo Consulta las Cartas...</div>", unsafe_allow_html=True)
     
-    with st.spinner("Conectando con el oráculo de voz..."):
-        # audio_bytes = texto_a_audio(texto_para_leer)
+    with st.spinner("✨ Interpretando el destino..."):
+        prediccion_ia = generar_prediccion_ia(c1, c2, c3)
+    
+    # 2. MOSTRAR PREDICCIÓN
+    st.markdown(f"<div class='pred-text'>{prediccion_ia}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='final-destiny'>¡Las cartas {c1}, {c2} y {c3} han hablado!</div>", unsafe_allow_html=True)
+
+    # 3. GENERAR AUDIO
+    texto_para_leer = f"Atención. El oráculo ha hablado. {prediccion_ia}"
+    
+    with st.spinner("🎙️ El oráculo prepara su voz..."):
         audio_bytes = texto_a_audio_elevenlabs(texto_para_leer)
     
     if audio_bytes:
-        st.audio(audio_bytes, format='audio/mp3', start_time=0, autoplay=True)
+        st.audio(audio_bytes, format='audio/mp3', autoplay=True)
+        logger.info("✅ Audio reproducido")
     else:
-        st.warning("🔇 El oráculo está afónico (Error de conexión con gTTS), pero tu destino sigue escrito arriba.")
-        logger.warning("Fallo en la generación de audio, mostrando solo texto.")
+        st.warning("🔇 El oráculo está afónico, pero tu destino está escrito arriba.")
+        logger.warning("Fallo en audio")
 
-    # 3. BOTÓN DE REINICIO
-    if st.button("✨ Leer otra fortuna (Reiniciar) ✨", type="primary", use_container_width=True):
+    # 4. BOTÓN REINICIO
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("✨ Leer otra fortuna ✨", type="primary", use_container_width=True):
         st.session_state['cartas_vistas'] = [] 
         st.session_state['show_modal'] = False 
-        st.rerun() 
+        st.rerun()
 
 # Lógica de disparo del modal
 if total >= 3:
