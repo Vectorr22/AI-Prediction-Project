@@ -479,15 +479,13 @@ def mostrar_revelacion(c1, c2, c3):
     
     with st.spinner("✨ Interpretando el destino..."):
         prediccion_ia = generar_prediccion_ia(c1, c2, c3)
+        resultado_audio = texto_a_audio_elevenlabs(prediccion_ia)
     
     # 2. MOSTRAR PREDICCIÓN
     st.markdown(f"<div class='pred-text'>{prediccion_ia}</div>", unsafe_allow_html=True)
     st.markdown(f"<div class='final-destiny'>¡Las cartas {c1}, {c2} y {c3} han hablado!</div>", unsafe_allow_html=True)
 
-    # 3. GENERAR AUDIO
-    with st.spinner("🎙️ El oráculo prepara su voz..."):
-        resultado_audio = texto_a_audio_elevenlabs(prediccion_ia)
-
+    # 3. Reproducir AUDIO
     if resultado_audio and resultado_audio[0]:  # resultado_audio es (audio_bytes, texto_final)
         audio_bytes, texto_completo = resultado_audio
         st.audio(audio_bytes, format='audio/mp3', autoplay=True)
