@@ -49,8 +49,8 @@ Sigue estos pasos para correr el proyecto en tu máquina local:
 
 ### 1. Clonar el repositorio
 ```bash
-git clone [https://github.com/tu-usuario/oraculo-loteria.git](https://github.com/tu-usuario/oraculo-loteria.git)
-cd oraculo-loteria
+git clone https://github.com/Vectorr22/AI-Prediction-Project.git
+cd AI-Prediction-Project
 ```
 ### 2. Crear un entorno virtual (Recomendado)
 ```bash
