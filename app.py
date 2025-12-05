@@ -17,7 +17,8 @@ def get_secret(key_name):
     """Busca la clave primero en Streamlit Cloud Secrets, luego en variables de entorno"""
     if key_name in st.secrets:
         return st.secrets[key_name]
-    return os.getenv(key_name)
+    else:
+        return os.getenv(key_name)
 
 
 ELEVENLABS_API_KEY = get_secret("ELEVENLABS_API_KEY")
@@ -65,17 +66,17 @@ def generar_prediccion_ia(c1, c2, c3):
     3. FUTURO (Consecuencia/Advertencia): {c3}
     
     TU TAREA:
-    Escribe UNA SOLA predicción de máximo 50 palabras que conecte estas tres cartas en una historia fluida.
+    Escribe UNA SOLA predicción de máximo 100 palabras que conecte estas tres cartas en una historia fluida.
     
     REGLAS DE ORO:
     - NO empieces las oraciones con "Tu pasado fué", "Tu presente es" o "Tu futuro será". Usa conectores como "antes", "ahorita", "por eso", "así que aguas".
     - NO hagas listas. Debe ser un párrafo corrido.
     - Menciona las cartas por su nombre.
-    - Tono: Divertido, místico, mexicano ("órale", "no manches", "ponte trucha").
+    - Tono: Divertido, místico.
     - Termina con una advertencia o consejo contundente basado en la tercera carta.
-    - Aunque puedes usar modismos mexicanos, no caigas mucho en ellos, no es una exageración de mexicano
+    - Crea historias coherentes.
     Ejemplo de estilo deseado:
-    "Uy amigo, se ve que el Apache te trajo problemas de a gratis, y aunque ahorita el Gallo te tiene muy despierto y movido, bájale dos rayitas porque la Sirena te quiere endulzar el oído con mentiras."
+    "Uy, se ve que el Apache te trajo problemas, y aunque ahorita el Gallo te tiene muy despierto y movido, bájale dos rayitas porque la Sirena te quiere endulzar el oído con mentiras."
     """
     
     try:
@@ -111,11 +112,11 @@ def texto_a_audio_elevenlabs(texto_prediccion):
     try:
         # Usamos settings probados para que suene expresivo pero estable
         response = client_eleven.text_to_speech.convert(
-            voice_id="VR6AewLTigWG4xSOukaG", # Arnold (Voz profunda/mística)
+            voice_id="TX3LPaxmHKxFdv7VOQHJ", # Arnold (Voz profunda/mística)
             optimize_streaming_latency="0",
             output_format="mp3_44100_128",
             text=texto_final,
-            model_id="eleven_multilingual_v2",
+            model_id="eleven_v3",
             voice_settings=VoiceSettings(
                 stability=0.4,       # Un poco más bajo = más emoción/variación
                 similarity_boost=0.8, # Mantiene la identidad de la voz
