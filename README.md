@@ -1,7 +1,7 @@
 # 🔮 El Oráculo de la Lotería Mexicana (AI Powered)
 
 ![Banner Principal](screenshots/banner.png)
-*(Pon aquí una imagen atractiva o banner del proyecto)*
+
 
 Un sistema interactivo de **Visión por Computadora** e **Inteligencia Artificial Generativa** que moderniza la tradición de la Lotería Mexicana.
 

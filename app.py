@@ -113,7 +113,7 @@ def texto_a_audio_elevenlabs(texto_prediccion):
         # Usamos settings probados para que suene expresivo pero estable
         response = client_eleven.text_to_speech.convert(
             voice_id="TX3LPaxmHKxFdv7VOQHJ", # Arnold (Voz profunda/mística)
-            optimize_streaming_latency="0",
+            #optimize_streaming_latency="0",
             output_format="mp3_44100_128",
             text=texto_final,
             model_id="eleven_v3",
