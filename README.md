@@ -43,6 +43,8 @@ Una vez reunidas 3 cartas, la IA genera una historia única y la narra con voz.
 
 ## ⚙️ Instalación y Configuración
 
+## NOTA: El proyecto también es accesible desde su página web: https://ai-prediction-project-a7pxtbreuemmdhzksjj9yn.streamlit.app/
+
 Sigue estos pasos para correr el proyecto en tu máquina local:
 
 ### 1. Clonar el repositorio
