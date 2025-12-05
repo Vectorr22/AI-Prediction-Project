@@ -118,9 +118,9 @@ def texto_a_audio_elevenlabs(texto_prediccion):
             text=texto_final,
             model_id="eleven_v3",
             voice_settings=VoiceSettings(
-                stability=0.4,       # Un poco más bajo = más emoción/variación
-                similarity_boost=0.8, # Mantiene la identidad de la voz
-                style=0.6,           # Estilo dramático moderado
+                stability=0.5,       # Un poco más bajo = más emoción/variación
+                similarity_boost=0.5, # Mantiene la identidad de la voz
+                style=0.5,           # Estilo dramático moderado
                 use_speaker_boost=True
             )
         )
